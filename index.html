@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Basin Shaper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+</head>
+<body>
+<div class="shell">
+<header>
+  <h1>Basin Shaper <small>rain gardens &amp; retention basins for flood models</small></h1>
+  <div class="spacer"></div>
+  <div class="row">
+    <button class="btn" id="btnCsv" type="button">Stage–storage CSV</button>
+    <button class="btn primary" id="btnExport" type="button">Export for GIS (.zip)</button>
+  </div>
+</header>
+
+<div class="app">
+  <aside>
+    <section class="block">
+      <h2>Footprints</h2>
+      <label class="drop" id="drop" for="file"><strong>Import a rough outline</strong><br>Zipped shapefile, .shp + .dbf + .prj, or GeoJSON. Drop files here or click to choose.</label>
+      <input type="file" id="file" multiple accept=".zip,.shp,.dbf,.prj,.cpg,.shx,.geojson,.json" hidden>
+      <div class="stack"><label for="crs">CRS for export</label><select id="crs"></select></div>
+      <div class="note" id="crsNote"></div>
+    </section>
+
+    <section class="block">
+      <h2>Basins <span class="note" id="count"></span></h2>
+      <div class="feats" id="feats"></div>
+      <div class="row"><button class="btn small" id="btnClear" type="button">Remove all</button></div>
+    </section>
+
+    <section class="block">
+      <details id="addBox">
+        <summary>Add a shape from dimensions</summary>
+        <div class="form">
+          <label for="addShape">Shape</label>
+          <select id="addShape"><option value="rect">Rectangle</option><option value="round">Rounded strip</option><option value="ellipse">Ellipse</option></select>
+          <label for="addL">Length <span class="u">m</span></label><input type="number" id="addL" value="20" step="0.5" min="0.5">
+          <label for="addW">Width <span class="u">m</span></label><input type="number" id="addW" value="6" step="0.5" min="0.5">
+          <label for="addRot">Rotation <span class="u">°</span></label><input type="number" id="addRot" value="0" step="5">
+          <label for="addX">Centre X <span class="u">m</span></label><input type="number" id="addX" step="1">
+          <label for="addY">Centre Y <span class="u">m</span></label><input type="number" id="addY" step="1">
+        </div>
+        <div class="row" style="margin-top:8px"><button class="btn small" id="btnAdd" type="button">Add basin at centre</button></div>
+        <p class="note">Centre defaults to the middle of the plan view. Use "Set volume → size" afterwards to grow or shrink it to a target volume.</p>
+      </details>
+    </section>
+
+    <section class="block">
+      <h2>Raster for the flood model</h2>
+      <div class="form">
+        <label for="cell">Cell size <span class="u">m</span></label><input type="number" id="cell" value="1" step="0.25" min="0.05">
+        <label for="ox">Snap origin X</label><input type="number" id="ox" value="0" step="1">
+        <label for="oy">Snap origin Y</label><input type="number" id="oy" value="0" step="1">
+        <label for="cint">Contour interval <span class="u">m</span></label><input type="number" id="cint" value="0.1" step="0.05" min="0.01">
+        <label for="poolBurn">Permanent pool in DEM</label>
+        <select id="poolBurn"><option value="filled">Water surface</option><option value="bottom">Excavated bottom</option></select>
+      </div>
+      <div class="note" id="rasterNote"></div>
+    </section>
+  </aside>
+
+  <main>
+    <div class="plancard">
+      <canvas id="plan" aria-label="Plan view of basins"></canvas>
+      <div class="overlay"><button class="btn small" id="btnFit" type="button">Fit view</button></div>
+      <div class="banner" id="exampleBanner">Example basins near Valby, EPSG:25832. Import your own outline to replace them.</div>
+      <div class="coords" id="coords">—</div>
+    </div>
+    <div class="lower">
+      <div class="card"><h2>Cross-section <span id="secInfo"></span><button class="btn small" id="btnRot" type="button">Turn 90°</button></h2><canvas class="chart" id="section"></canvas></div>
+      <div class="card"><h2>Stage–storage <span id="ssInfo"></span></h2><canvas class="chart" id="stage"></canvas></div>
+    </div>
+  </main>
+
+  <aside class="right">
+    <section class="block">
+      <input type="text" class="name" id="pName" aria-label="Basin name">
+      <div class="form">
+        <label for="pType">Type</label>
+        <select id="pType"><option value="raingarden">Rain garden</option><option value="dry">Dry retention basin</option><option value="wet">Wet retention pond</option></select>
+      </div>
+      <div class="seg" id="mode" role="group" aria-label="Design mode">
+        <button type="button" data-m="depth">Set depth → volume</button>
+        <button type="button" data-m="vdepth">Set volume → depth</button>
+        <button type="button" data-m="vsize">Set volume → size</button>
+      </div>
+      <div class="form" id="pform">
+        <span class="sub">Geometry</span>
+        <label for="pVt">Target storage <span class="u">m³</span></label><input type="number" id="pVt" step="1" min="0">
+        <label for="pS">Storage depth <span class="u">m</span></label><input type="number" id="pS" step="0.05" min="0">
+        <label for="pF">Freeboard <span class="u">m</span></label><input type="number" id="pF" step="0.05" min="0">
+        <label for="pP">Permanent pool depth <span class="u">m</span></label><input type="number" id="pP" step="0.1" min="0">
+        <label for="pM">Side slope <span class="u">1 : n</span></label><input type="number" id="pM" step="0.5" min="0">
+        <label for="pMinB">Min. bottom width <span class="u">m</span></label><input type="number" id="pMinB" step="0.1" min="0">
+        <label for="pScale">Footprint scale <span class="u">×</span></label><input type="number" id="pScale" step="0.05" min="0.05">
+        <label for="pSmooth">Smooth outline <span class="u">passes</span></label><input type="number" id="pSmooth" step="1" min="0" max="4">
+        <label for="pRim">Rim elevation <span class="u">m, optional</span></label><input type="number" id="pRim" step="0.01" placeholder="relative">
+        <span class="sub" id="soilHead">Soil (rain garden)</span>
+        <label for="pMedia" class="soil">Filter media depth <span class="u">m</span></label><input class="soil" type="number" id="pMedia" step="0.05" min="0">
+        <label for="pPor" class="soil">Media porosity <span class="u">–</span></label><input class="soil" type="number" id="pPor" step="0.05" min="0" max="1">
+        <label for="pInf">Infiltration rate <span class="u">mm/h</span></label><input type="number" id="pInf" step="1" min="0">
+        <span class="sub">Contributing catchment</span>
+        <label for="pCA">Area <span class="u">m²</span></label><input type="number" id="pCA" step="10" min="0" placeholder="optional">
+        <label for="pC">Runoff coefficient</label><input type="number" id="pC" step="0.05" min="0" max="1">
+        <label for="pRain">Design rain <span class="u">mm</span></label><input type="number" id="pRain" step="1" min="0">
+      </div>
+      <div class="row"><button class="btn small" id="btnRainVt" type="button">Use rain × area × C as target</button><button class="btn small" id="btnAll" type="button">Apply settings to all</button></div>
+    </section>
+
+    <section class="block">
+      <h2>Design sheet</h2>
+      <div class="status" id="status"></div>
+      <div class="results" id="results"></div>
+    </section>
+    <div class="row"><button class="btn small" id="btnDel" type="button">Remove this basin</button></div>
+  </aside>
+</div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "basin-shaper",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Shape rain gardens and retention basins from rough footprints and export geometry for flood models (ArcGIS / QGIS / PluvioFlow).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vite-plugin-singlefile": "^2.2.0",
+    "vitest": "^3.1.4"
+  }
+}
